@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>全球节点</title>
+<style>
+  :root{
+    --bg:#050608;
+    --line:rgba(255,255,255,.10);
+    --txt:#e8edf4;
+    --muted:#9aa3b0;
+    --glow:0 0 40px rgba(255,255,255,.25);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    font-family:"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    background:var(--bg);color:var(--txt);overflow-x:hidden;line-height:1.6;
+  }
+  a{color:inherit;text-decoration:none}
+  ::selection{background:#fff;color:#000}
+
+  #bg-canvas{position:fixed;inset:0;z-index:0;opacity:.45}
+  .bg-grad{
+    position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:
+      radial-gradient(1100px 800px at 50% -5%, rgba(255,255,255,.05), transparent 60%),
+      radial-gradient(900px 700px at 50% 115%, rgba(255,255,255,.03), transparent 60%);
+  }
+  .wrap{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:0 24px}
+
+  header{
+    position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);
+    background:rgba(5,6,8,.55);border-bottom:1px solid var(--line);
+  }
+  .nav{display:flex;align-items:center;justify-content:space-between;height:68px}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:1px;font-size:20px}
+  .logo .dot{width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:0 0 14px rgba(255,255,255,.7);animation:pulse 2.4s infinite}
+  .logo-img{height:34px;width:34px;object-fit:contain;display:block;filter:drop-shadow(0 0 8px rgba(255,255,255,.35))}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+  .btn{
+    display:inline-block;padding:10px 22px;border-radius:30px;font-size:14px;font-weight:600;
+    border:1px solid #fff;color:#fff;transition:.25s;cursor:pointer;background:transparent;
+  }
+  .btn:hover{background:#fff;color:#000;box-shadow:0 0 30px rgba(255,255,255,.35)}
+
+  /* 入场：从中心向外展开 */
+  body.iris-in main{animation:irisIn 1s ease both}
+  @keyframes irisIn{from{clip-path:circle(0% at 50% 50%)}to{clip-path:circle(150% at 50% 50%)}}
+  /* 离开：向中间收拢 */
+  body.page-leave header, body.page-leave main{animation:leaveCenter .7s ease-in forwards}
+  @keyframes leaveCenter{to{opacity:0;transform:scale(.88);filter:blur(8px)}}
+
+  .globe-sec{padding:70px 0 90px;text-align:center}
+  .sec-head{text-align:center;max-width:640px;margin:0 auto 26px}
+  .sec-head .tag{color:rgba(255,255,255,.65);font-size:13px;letter-spacing:3px;text-transform:uppercase}
+  .sec-head h2{font-size:clamp(28px,4vw,44px);font-weight:800;margin:12px 0 14px}
+  .sec-head p{color:var(--muted)}
+
+  .stage{
+    position:relative;margin:10px auto 0;width:min(560px,86vw);height:min(560px,86vw);
+  }
+  #globe{width:100%;height:100%;display:block;cursor:grab;touch-action:none}
+  #globe:active{cursor:grabbing}
+  .pin-hint{
+    position:absolute;left:50%;bottom:14px;transform:translateX(-50%);
+    font-size:13px;color:var(--muted);letter-spacing:1px;
+    background:rgba(5,6,8,.5);border:1px solid var(--line);border-radius:20px;padding:6px 14px;
+  }
+  .visitor-info{
+    margin:22px auto 0;font-size:14px;color:rgba(255,255,255,.8);letter-spacing:1px;
+    display:inline-block;border:1px solid var(--line);border-radius:20px;padding:7px 18px;
+    background:rgba(5,6,8,.5);
+  }
+  .legend{
+    margin:26px auto 0;display:flex;gap:26px;justify-content:center;flex-wrap:wrap;
+    color:var(--muted);font-size:14px;
+  }
+  .legend span{display:inline-flex;align-items:center;gap:8px}
+  .legend i{width:10px;height:10px;border-radius:50%;background:#fff;box-shadow:0 0 10px #fff}
+  .dot-grid{width:10px;height:10px;border-radius:50%;background:transparent;border:1px solid rgba(255,255,255,.5)}
+  .ring{width:10px;height:10px;border-radius:50%;border:1px solid rgba(255,255,255,.35)}
+
+  footer{border-top:1px solid var(--line);padding:34px 0;color:var(--muted);font-size:14px;text-align:center}
+
+  /* 滚动揭示 */
+  .reveal{opacity:0;transform:translateY(28px);transition:.7s ease}
+  .reveal.in{opacity:1;transform:none}
+</style>
+</head>
+<body>
+  <canvas id="bg-canvas"></canvas>
+  <div class="bg-grad"></div>
+
+  <header>
+    <div class="wrap nav">
+      <div class="logo"><img class="logo-img" src="hy-logo.png" alt="鹤羽科技">鹤羽科技</div>
+      <a href="index.html" class="btn" id="back-home">← 返回首页</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="globe-sec">
+      <div class="sec-head reveal">
+        <div class="tag">Global Nodes</div>
+        <h2>全球节点</h2>
+        <p>真实地球地形，每一位访客的位置都会被记录在这颗星球上。拖动可旋转。</p>
+      </div>
+      <div class="stage reveal">
+        <canvas id="globe"></canvas>
+        <div class="pin-hint">● 杭州 · 我们的节点</div>
+      </div>
+      <div class="visitor-info reveal" id="visitor-info">正在定位…</div>
+      <div class="legend reveal">
+        <span><i></i> 你/访客的位置</span>
+        <span><span class="dot-grid"></span> 陆地地形</span>
+        <span><span class="ring"></span> 经纬网格</span>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">© 2026 鹤羽科技 · 全球节点</div>
+  </footer>
+
+<!-- 云服务 SDK（访客位置云端存储） -->
+<script src="https://cdn.jsdelivr.net/npm/@tencent-ai/workbuddy-cloud-sdk@dev/lib/index.global.js"></script>
+<script>
+  const cloud = WorkBuddyCloud.createWorkBuddyCloud({
+    endpoint: 'https://my-website-36784.app.workbuddy.host',
+    publishableKey: 'wbpk_VmfarAlKRQt9zlldhQSClv_S9mSLBdiJ769crSYnUMF0f70mdWjkVRX',
+  });
+  window.__CLOUD__ = {
+    async addVisitor(v){
+      const { error } = await cloud.database.from('visitors')
+        .insert({ lat: v.lat, lon: v.lon, city: v.city || null });
+      if(error) throw error;
+    },
+    async getVisitors(){
+      const { data, error } = await cloud.database.from('visitors')
+        .select('lat, lon, city')
+        .order('created_at', { ascending: false })
+        .limit(500);
+      if(error) throw error;
+      return (data || []).map(r => ({ lat: r.lat, lon: r.lon, city: r.city || '' }));
+    }
+  };
+</script>
+
+<script>
+  // ===== 白色三角形背景（随鼠标下移而移动） =====
+  const bcv = document.getElementById('bg-canvas');
+  const bctx = bcv.getContext('2d');
+  let bw, bh, tris = [];
+  let mouseX = bw/2||0, mouseY = 0, smX = 0, smY = 0;
+  let clickDots = [];
+  function bresize(){
+    bw = bcv.width = innerWidth; bh = bcv.height = innerHeight;
+    const n = Math.max(28, Math.min(80, Math.floor(bw*bh/24000)));
+    tris = [];
+    for(let i=0;i<n;i++){
+      const depth = 0.25 + Math.random()*0.95;
+      tris.push({ bx:Math.random()*bw, by:Math.random()*bh, size:7+Math.random()*38,
+        rot:Math.random()*Math.PI*2, vrot:(Math.random()-.5)*0.005, driftY:Math.random()*0.25+0.05,
+        depth, alpha:0.08+depth*0.55 });
+    }
+  }
+  function bdrawTri(x,y,s,r,a){
+    bctx.save();bctx.translate(x,y);bctx.rotate(r);bctx.beginPath();
+    for(let i=0;i<3;i++){const ang=-Math.PI/2+i*(Math.PI*2/3);i===0?bctx.moveTo(Math.cos(ang)*s,Math.sin(ang)*s):bctx.lineTo(Math.cos(ang)*s,Math.sin(ang)*s);}
+    bctx.closePath();bctx.fillStyle='rgba(255,255,255,'+a+')';bctx.fill();bctx.restore();
+  }
+  function bdraw(){
+    bctx.clearRect(0,0,bw,bh);
+    smX+=(mouseX-smX)*0.06;smY+=(mouseY-smY)*0.06;
+    const mx=smX-bw/2,my=smY-bh/2;
+    for(const t of tris){
+      t.rot+=t.vrot;t.by+=t.driftY;if(t.by>bh+60)t.by=-60;
+      const x=t.bx+mx*t.depth*0.05,y=t.by+my*t.depth*0.10;
+      bdrawTri(x,y,t.size,t.rot,t.alpha);
+    }
+    for(let i=clickDots.length-1;i>=0;i--){
+      const d=clickDots[i];d.t++;d.x+=d.vx;d.y+=d.vy;
+      const fin=Math.min(Math.max(d.t-d.delay,0)/(d.life*0.3),1);
+      const fout=Math.min((d.life-d.t)/(d.life*0.5),1);
+      const a=Math.max(0,fin)*Math.max(0,fout)*0.9;
+      if(d.t>=d.life){clickDots.splice(i,1);continue;}
+      bctx.beginPath();bctx.arc(d.x,d.y,d.r,0,Math.PI*2);bctx.fillStyle='rgba(255,255,255,'+a+')';bctx.fill();
+    }
+    requestAnimationFrame(bdraw);
+  }
+  function spawnClickDots(cx,cy){
+    const rings=[{r:4,n:12,delay:0},{r:9,n:18,delay:2},{r:14,n:24,delay:4},{r:19,n:30,delay:6},{r:24,n:36,delay:8}];
+    rings.forEach((ring,ri)=>{for(let k=0;k<ring.n;k++){const ang=(k/ring.n)*Math.PI*2+ri*0.12;
+      clickDots.push({x:cx+Math.cos(ang)*ring.r,y:cy+Math.sin(ang)*ring.r,vx:Math.cos(ang)*0.14,vy:Math.sin(ang)*0.14,
+        r:1.4,t:0,delay:ring.delay,life:80+ri*35});}});
+  }
+  addEventListener('mousemove',e=>{mouseX=e.clientX;mouseY=e.clientY;});
+  addEventListener('touchmove',e=>{if(e.touches[0]){mouseX=e.touches[0].clientX;mouseY=e.touches[0].clientY;}},{passive:true});
+  addEventListener('click',e=>spawnClickDots(e.clientX,e.clientY));
+  addEventListener('touchstart',e=>{if(e.touches[0])spawnClickDots(e.touches[0].clientX,e.touches[0].clientY);},{passive:true});
+  bresize();bdraw();addEventListener('resize',bresize);
+
+  // ===== 线框地球 =====
+  const cv = document.getElementById('globe');
+  const ctx = cv.getContext('2d');
+  let W,H,cx,cy,R,dpr;
+  let rotY = 0;            // 自转角
+  let tilt = -0.45;        // 轴倾角（绕X）
+  let autoSpin = true;     // 自动自转
+  const D = Math.PI/180;
+
+  // 节点（经纬度）；目前仅杭州
+  const NODES = [{ name:'杭州', lat:30.28, lon:120.15 }];
+
+  // ===== 地形：内嵌陆地掩码（Natural Earth 110m），转成点阵 =====
+  const LAND_B64 = "////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////f///////////////////////////////////////////////////////3x8AAP7///////////////////////////////////////////////////8/AAAA/P///////////////////////////////////////////////////x8AAAAA+P//////////////4f///////////////////////////////////wAAAAAA/v////////////8HAAD4////////////////////////////////HwAAAAAAAP7//////////wf8wD8AwP//////////////////////////////DwAAAAAcgP//////////fwAAAP4BwP//////////////////////////////HwAAAACH////////////PwAAAPgA/////////////////////////////////wcAAADA/////////////wEAAAAA8P///////////////////////////////wAAAAAAAPz//////////z8AAAAAAP///////////////////////////////wAAAAAAAPz///////////8HAAAAAAD+/////////////////////////////wAAAAAAAADwv/MXgP////8fAAAAAADw/////////////////////////////wMAAAAAAAAAYAYA4ON/OPh/AAAAAADw/////////////////////////////x8AAAAAAAAAAAAAAAAAAAB+AAAAAACA/////////////////////////////38AAAAAAAAAAAAAAAAAAP5+AAAAAAAA5v////////////D//////////////38AAAAAAAAAAAAAAAAAAHA/AAAAAAAAAAA8//P//////+D/////////////HwAAAAAAAAAAAAAAAAAAADAfAAAAAAAAAAAAAADw8////wP+////////////AwAAAAAAAAAAAAAAAAAAAAAHAAAAAAAAAAAAAAAAgP///wH4//////////8DAAAAAAAAAAAAAAAAAAAAAAAHAAAAAAAAAAAAAAAAAPD/AADA/////////z8AAAAAAAAAAAAAAAAAAAAAAAAOAAAAAAAAAAAAAAAAAIAfAAAAAAAeeADADwAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH6AAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP8AAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP8BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP4DAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP4BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAAAAAP4BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHgAAAAAAAAAAAAAAAAAAPwHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHAAAAAAAAAAAAAAAAAAAPgHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAMABAAAAAAAAAAAAAAAAAPwfAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOAAAIADAAAAAAAAAAAAAAAAAPwHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOAAAAALAAAAAAAAAAAAAAAAAPw/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYAAAAAAAAAAAAAAAAAPg/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAcAAAAAAAAAAAAAAAAAPj/AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGgAAAA4AAAAAAAAAAAAAAAAAPz/BwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP8DAAAIAAAAAAAAAAAAAAAAAPj/BwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP8DAAAEAAAAAAAAAAAAAAAAAPj/BwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwP8DAAACAAAAAAAAAAAAAAAAAPD/OwAAAAAAAAAAgAEAAAAAAAAAAAAAAAcA6P8HAAAAAAAAAAAAAAAAAAAAAPD/fwAAAAAAAAAAwH8AAAAAAAAAAAAAgP8A2P8HAAAAAAAAAAAAAAAAAAAAAOD//wAAAAAAAAAAwP8BAAAAAAAAAAAAAP8D/P8PAAAAAAAAAAAAAAAAAAAAAPD//wEAAAAAAAAAwP8DAAAAAAAAAAAAAP////8fAAAAAAAAAAAAAAAAAAAAAPD//wMAAAAAAAAA4P8HAAAAAAAAAAAAgP////8fAAAAAAAAAAAAAAAAAAAAAOD//wMAAAAAAAAA4P8HAAAAAAAAAAAAgP////8fAAAAAAAAAAAAAAAAAAAAAOD//wcAAAAAAAAA8P8PAAAAAAAAAAAAgP////8/AAAAAAAAAAAAAAAAAAAAAOD//wcAAAAAAAAA+P8fAAAAAAAAAAAAwP////8fAAAAAAAAAAAAAAAAAAAAAOD//wcAAAAAAAAA+P8fAAAAAAAAAAAA4P////8fAAAAAAAAAAAAAAAAAAAAAOD//w8AAAAAAAAA+P8fAAIAAAAAAAAAwP////8fAAAAAAAAAAAAAAAAAAAAAOD//x8AAAAAAAAA+P9/AAcAAAAAAAAA4P////8PAAAAAAAAAAAAAAAAAAAAAMD//38AAAAAAAAA/P9/AA8AAAAAAAAAwP////8HAAAAAAAAAAAAAAAAAAAAAMD///8DAAAAAAAA/P//gA8AAAAAAAAAwP////8DAAAAAAAAAAAAAAAAAAAAAMD///8HAAAAAAAA/P9/gA8AAAAAAAAAgP////8BAAIAAAAAAAAAAAAAAAAAAMD///8PAAAAAAAA/v9/AB8AAAAAAAAAAPz///8BAAEAAAAAAAAAAAAAAAAAAMD///8PAAAAAAAA/v9/AB8AAAAAAAAAAOD//38AAAAAAAAAAAAAAAAAAAAAAMD///8PAAAAAAAA////AB8AAAAAAAAAAMD//z8AAAAAAAAAAAAAAAAAAAAAAOD///8fAAAAAAAA////Ax8AAAAAAAAAAMD//z4AAABAAAAAAAAAAAAAAAAAAPj///8fAAAAAAAA////Dz8AAAAAAAAAAAD/Pz4AAAiAAAAAAAAAAAAAAAAAAP7///8fAAAAAAAA////DzgAAAAAAAAAAAD/DxwAAAAAAAAAAAAAAAAAAAAAAP////8fAAAAAAAA////HzAAAAAAAAAAAADsDxwAAAAAAAAAAAAAAAAAAAAAAP////8fAAAAAAAA/v//HyAAAAAAAAAAAADADwwAAAAAAAAAAAAAAAAAAAAAgP////8/AAAAAAAA/v//HyAAAAAAAAAAAACAHwQAAAAAAAAAAAAAAAAAAAAAgP////9/AAAAAAAA/P//DwAAAAAAAAAAAAAAAQQAAAAAAAAAAAAAAAAAAAAAwP//////AAAAAAAA/v//DwAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAA4P//////AAAAAAAA/v//DwAAAAAAAAAAAAgBAIABMAAAAAAAAAAAAAAAAAAA4P//////AQAAAAAA/v//BwAAAAAAAAAAQFYEAMcAAAAAAAAAAAAAAAAAAAAA8P//////AQAAAAAA/v//BwAAAAAAAACAHwAAwH8ABAAAAAAAAAAAAAAAAAAA+P//////AQAAAAAA////BwAAAAAAAADAAQAAxP+AAAAAAAAAAAAAAAAAAAAA+P//////AQAAAAAA////BwAAAAAAAAAwAEAAxD8NAAAAAAAAAAAAAAAAAAAA+P////8/AAAAAACA////BwAAAAAAAAA4AEAA8B8AAAAAAAAAAAAAAAAAAAAA8P////8fAAAAAACA////DwAAAAAAAAA8wChE/gcAAAAAAAAAAAAAAAAAAAAA+P///38BAAAAAADA////HwAAAAAAAAA+/DkA8gAAAAAAAAAAAAAAAAAAAAAA+P///38AAAAAAADg////PwAAAAAAAAAO/DmAAwAAAAAAAAAAAAAAAAAAAAAA8P///wcAAAAAAADg////PwAAAAAAAAAP/gMAAQAAAAAAAAAAAAAAAAAAAAAA8P///wMAAAAAAADg////fwAAAAAAAIAH/vMQAAAAAAAAAAAAAAAAAAAAAAAA4P///wMAAAAAAADg/////wEAAAAAAIAL/gMQAAAAAAAAAAAAAAAAAAAAAAAA4P///wEAAAAAAADA/////wMAAAAAAMAM+AMAAAAAAAAAAAAAAAAAAAAAAAAAgP///wEAAAAAAADA/////wcAAAAAAGAG4AEAAAAAAAAAAAAAAAAAAAAAAAAAgP///wAAAAAAEAD8/////w8AAAAAADAGwAcAAAAAAAAAAAAAAAAAAAAAAAAAwP//fwAAAAAA/A/+/////x8AAAAAAAAHAAcAAAAAAAAAAAAAAAAAAAAAAAAAgP//AwAAAAAA/v///////x8AAAAwAAADAAMBAAAAAAAAAAAAAAAAAAAAAAAAyP//AQAAAACA/////////z8AAAAwAIAAAEAHAAAAAAAAAAAAAAAAAAAAAAAAz///AAAAAACA/////////z8AAAASAMAAAIACAAAAAAAAAAAAAAAAAAAAAAAAE+9/AAAAAADA/////////38AAAAXAEAgAAQCAAAAAAAAAAAAAAAAAAAAAADAAe9TAAAAAADg/////////34AAAAPAEBwAAgAAAAAAAAAAAAAAAAAAAAAAADAAAgAAAAAAADw////////f2AAAAAPAID4AUACAAAAAAAAAAAAAAAAAAAAAADgAQAAAAAAAAD4////////fwAAAIAPAMD8AQABAAAAAAAAAAAAAAAAAAAAAAD8AAAAAAAAAAD4////////vwcAAIAPAMD/AcAAAAAAAAAAAAAAAAAAAAAAAAD/AQAAAAAAAAD4////////nx8AAMAPAMD/ATAAAAAAAAAAAAAAAAAAAAAAAID/AAAAAAAAAAD4////////j/8AAMAPAMD/ATAAAAAAAAAAAAAAAAAAAAAAAP4PAAAAAAAAAAD4////////h/8BAOA/APz/ADAAAAAAAAAAAAAAAAAAAAAAgP8PAAAAAAAAAADw////////x/8HAOB/APx/ADAAAAAAAAAAAAAAAAAAAAAA8J8PAPwCAAAAAADw////////4/8fAOD/APw/AgAAAAAAAAAAAAAAAQAAAAAA+A8eADgAAAAAAADw////////4f8/AOD/Afw/BgAAAAAAAAAAAAAAAAAAAAAA/AccgAEAAAAAAADw////////8f9/AOD/B/5/AAAAAAAAAAAAAAAAAAAAAAAA+AcAYAAAAAAAAAD4////////+f9/APz/B///BgAAAAAAAAAAAAAAAAAAAAAA/AMAHQAAAAAAAADw////////+P//APz/f///fxAAAAAAAAAAAAAAAAAAAAAA/gMAAAAAAAAAAADw////////+P9/AP///////xEAAAAAAAAAAAAAAAAAAAAQ/wMAAAAAAAAAAADg//////9//n8cgP///////ycAAAAAAAAAAAAAAAAAAACQ/wcACAAAAAAAAADg//////9//r+A/////////wcAAAAAAAAAAAAAAAAAAACI/wcALAAAAAAAAADA//////8//z/g/////////w8AAAAAAAAAAAAAAAAAAADu/wcADgAAAAAAAACA//////8f/x/+/////////x8AAAAAAAAAAAAAAAAAAAD0/w8ABgAAAAAAAAAA/v////+//4///////////z8AAAAAAAAAAAAAAAAAAADy/x8GBgAAAAAAAAAA/P/////v/8///////////z8AAAAAAAAAAAAAAAAAAAD5////BwAAAAAAAAAA/P//f////////////////x8AAAAAAAAAAAAAAAAAAID9////BwAAAAAAAAAA/P//D3+E/////////////z9AAAAAAAAAAAAAAAAAAID/////DwAAAAAAAAAA+P//BwaA/////////////x/AAAAAAAAAAAAAAAAAAMD/////HwAAAAAAAAAA8P9/AACA/////////////x/AAwAAAAAAAAAAAAAAAPD/////fwAAAAAAAAAA4P8/AAAA/////////////w+EGwAAAAAAAAAAAAAAAPj//////wAAAAAAAAAAQPx/AAAA/////////////w8Y/gEAAAAAAAAAAAAAAPz//////wAAAAAAAAAAQOB/AAQ2/////////////x8c8AEAAAAAAAAAAAAAAP7//////wAAAAAAAAAA+AcABob//////////////zccwAEAAAAAAAAAAAAAAP7//////wEAAAAAAAAA+A8AAI7//////////////wMOAAEAAAAAAAAAAAAAAP///////wMAAAAAAAAA+A8wEMf//////////////0cOAAMAAAAAAAAAAAAAAP///////wMAAAAAAAAA+B8wuE/+/////////////98fAAMAAAAAAAAAAAAAAP///////x8AAAAAAAAA+D8Aj//w4f////////////8/AAAAAAAAAAAAAAAAAP///////x8AAAAAAAAA+H+Aw/8AwP////////////9/AA8AAAAAAAAAAAAAAP///////z8AAAAAAAAAcPzH8/8A8P//////////////Bx4AAAAAAAAAAAAAAP////////8MAAAAAAAAAPj/+P8B/P//////////////DwQAAAAAAAAAAAAAAP////////9/AAAAAAAAAPj//f9j/v//////////////HwAAAAAAAAAAAAAAAP////////+XAAAAAAAAAPz///93/P//////////////PwwAAAAAAAAAAAAAAP3///////8HUAAAAAAAAP7/////////////////////fwQAAAAAAAAAAAAAAP7//////38HfgAAAAAAgP///////////////////////wQAAAAAAAAAAAAAYP////////8xLAAAAAAAAPz//////////////////////wwAAAAAAAAAAAAA0P//////////DAAAAAAAgOH//////////////////////w0AAAAAAAAAAAAA8P//////7///FwAAAAAAAB///////////////////////wUAAgAAAAAAAAAA8P//////4///DwAAAAAAGD///////////////////////wUAAwAAAAAAAACA+P//////4///DwAAAAAAOA74/////////////////////wUADwAAAIAAAAAA/v//////8///BwAAAAAAOAcgcP//////////////////HwAAHwAAAAAGAAAA//////8/wP//AAAAAAAAwAOwA/7/////////////////DwCAPwAAAAAwAAAA//////8PgP8/AAAAAAAAwAFwD/7/////////////////PwAAfwAAAADADgDA/////38AgP8/AAAAAAAAwANAH/T//////////////////wAAfgAAAACAAwD8/////38AwP8eAAAAAAAAgAGcH/D//////////////////wEAOAAAAAD8MwD//////x8AwH8MAAAAAAAAAAD+P2D///////////////////95cAAAAID///z//////z8AwD8AAMABAAAAAAD+P/z///////////////////9/wH8AAMD//////////z8AwA8AAPgBAAAAAAD+H/7/////////////////////Of8BAID///////////8AQ8ABAPwBAAAAAAD8P/7///////////////////////9fAAP4///////////BBPAHAP4HAAAAAADg//z///////////////////////9/QID4///////////Pw/0DAP8HAMAfAACA//F//v////////////////////8//vD///////////9fAPwYgP8PAOA/AAAA/+N/8P//////////////////////34H8////////////Afw/gP//AQAAAAAA/v+fH////+//////////////////DwD////////////vh/kPwP//BwAAAAAA/P//H/P//5//////////////////AeD///////8DB8TPB/4AAP///wAAAAAA8P//AwDjf77/////////////////AAD+///h/4//H+/Bg/8BwP7//w8AAAAAwP8fAAAAj9///////////////88/AAD4HwAAAAD8H/D4/38A4P///xMAAAAAAPAHAAAAgN//////////////DwAAAQAAAAAAAO//B3f8/wsA4P///z8AAAAAAAAAAAAPAG////////8f2f8HAAAAAAAAAAAAgN9/xzf8RwAA4P///z8AAAAAAAAAAAAPAB7g//////8fgB8AAAAAAAAAAAAAAP8Ahvc5OwAA8P///38AAAAAAAAAAAAcAADg////34cHAAcAAAAAAAAAAAAAAAAMAAD8AgAA+P////8AAAAAAAAAAABwAAAA/P//AwAAAAAAAAAAAAAAAAAAAIC/g7PfBwAA/v////8AAAAAAAAAAADgBwAAwP//PwAA4B8AAAAAAAAAAAAAADzAgPP5H8D//////38AAAAAAAAAAAAA4AEAAAD+DwAAAAAAAAAAAAAAAAAAAOAQACDwP4D///////8BAAAAPAQAAAAAAAAAAAAYAAAAAAAAAAAAAAAAAAAAAAA4+I73//n///////8AAAAAfwAAAAAAAAAAAAAfAAAAAAAAAAAAAAAAAAAAAAAAAOD//wP8//////8BAACAfx4AAAAAAAAAAP4AAAAAAAAAAAAAAAAAAAAAAAAAAPAH/j/+//////8PAAAAgB0AAHgAAAAAAD8AAAAAAAAAAAAAAAAAAAAAAAAAAAD+///D/////5//AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADA/v8/AOD//z8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADg/wEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+  const LON_N = 360, LAT_N = 180;
+  const landPts = (function(){
+    const bin = atob(LAND_B64);
+    const bytes = new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+    const pts = [];
+    for(let iy=0; iy<LAT_N; iy++){
+      const lat = -90 + (iy+0.5)*(180/LAT_N);
+      const la = lat*D;
+      for(let ix=0; ix<LON_N; ix++){
+        const idx = iy*LON_N + ix;
+        if((bytes[idx>>3] >> (idx&7)) & 1){
+          const lon = -180 + (ix+0.5)*(360/LON_N);
+          const lo = lon*D;
+          pts.push({
+            x: Math.cos(la)*Math.sin(lo),
+            y: Math.sin(la),
+            z: Math.cos(la)*Math.cos(lo)
+          });
+        }
+      }
+    }
+    return pts;
+  })();
+
+  // ===== 访客位置 =====
+  let VISITORS = [];   // {lat, lon, current?, city?}
+  let visitorBases = [];
+  function refreshVisitorBases(){ visitorBases = VISITORS.map(v=>{
+    const la=v.lat*D, lo=v.lon*D;
+    return { x:Math.cos(la)*Math.sin(lo), y:Math.sin(la), z:Math.cos(la)*Math.cos(lo), current:!!v.current, city:v.city };
+  }); }
+  function drawVisitorDots(){
+    const cosY=Math.cos(rotY), sinY=Math.sin(rotY), cosT=Math.cos(tilt), sinT=Math.sin(tilt);
+    for(const b of visitorBases){
+      const x1 = b.x*cosY + b.z*sinY;
+      const z1 = -b.x*sinY + b.z*cosY;
+      const y2 = b.y*cosT - z1*sinT;
+      const z2 = b.y*sinT + z1*cosT;
+      if(z2 <= 0.02) continue;
+      const px = cx + x1*R, py = cy - y2*R;
+      const fade = Math.min(1, z2*2.2);
+      if(b.current){
+        const tp = performance.now()/1000;
+        const pulse = 1 + (Math.sin(tp*2.4)+1)/2*0.9;
+        ctx.beginPath();ctx.arc(px,py, 8*dpr*pulse, 0, Math.PI*2);
+        ctx.strokeStyle='rgba(255,255,255,'+(0.4*fade)+')';ctx.lineWidth=1.5*dpr;ctx.stroke();
+        ctx.save();ctx.shadowColor='rgba(255,255,255,.9)';ctx.shadowBlur=14*dpr;
+        ctx.beginPath();ctx.arc(px,py, 3.4*dpr, 0, Math.PI*2);
+        ctx.fillStyle='rgba(255,255,255,'+fade+')';ctx.fill();ctx.restore();
+        if(b.city){ctx.font=(13*dpr)+'px "Segoe UI","PingFang SC",sans-serif';ctx.fillStyle='rgba(255,255,255,'+fade+')';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(b.city, px+10*dpr, py);}
+      } else {
+        ctx.beginPath();ctx.arc(px,py, 2.2*dpr, 0, Math.PI*2);
+        ctx.fillStyle='rgba(255,255,255,'+(0.5*fade)+')';ctx.fill();
+      }
+    }
+  }
+
+  function gresize(){
+    dpr = Math.min(2, window.devicePixelRatio||1);
+    const rect = cv.getBoundingClientRect();
+    W = cv.width = rect.width*dpr; H = cv.height = rect.height*dpr;
+    cx = W/2; cy = H/2;
+    R = Math.min(W,H)*0.40;
+  }
+
+  function project(lat, lon){
+    const la = lat*D, lo = lon*D;
+    let x = Math.cos(la)*Math.sin(lo);
+    let y = Math.sin(la);
+    let z = Math.cos(la)*Math.cos(lo);
+    // 绕Y自转
+    let x1 = x*Math.cos(rotY) + z*Math.sin(rotY);
+    let z1 = -x*Math.sin(rotY) + z*Math.cos(rotY);
+    // 绕X倾斜
+    let y2 = y*Math.cos(tilt) - z1*Math.sin(tilt);
+    let z2 = y*Math.sin(tilt) + z1*Math.cos(tilt);
+    return { x:x1, y:y2, z:z2 };
+  }
+
+  function drawGlobe(){
+    ctx.clearRect(0,0,W,H);
+
+    // 外圈淡光晕
+    const halo = ctx.createRadialGradient(cx,cy,R*0.7,cx,cy,R*1.5);
+    halo.addColorStop(0,'rgba(255,255,255,.05)');
+    halo.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle = halo;
+    ctx.beginPath();ctx.arc(cx,cy,R*1.5,0,Math.PI*2);ctx.fill();
+
+    // 球体暗底（让正面更立体）
+    ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,.02)';ctx.fill();
+
+    // ===== 地形点阵（陆地）=====
+    const cosY=Math.cos(rotY), sinY=Math.sin(rotY), cosT=Math.cos(tilt), sinT=Math.sin(tilt);
+    // 近正面更亮的一层
+    ctx.fillStyle='rgba(255,255,255,.62)';
+    for(let i=0;i<landPts.length;i++){
+      const b=landPts[i];
+      const x1=b.x*cosY+b.z*sinY, z1=-b.x*sinY+b.z*cosY;
+      const y2=b.y*cosT-z1*sinT, z2=b.y*sinT+z1*cosT;
+      if(z2<=0.4) continue;
+      ctx.fillRect(cx+x1*R, cy-y2*R, 1.5*dpr, 1.5*dpr);
+    }
+    // 远正面（边缘）较暗的一层
+    ctx.fillStyle='rgba(255,255,255,.28)';
+    for(let i=0;i<landPts.length;i++){
+      const b=landPts[i];
+      const x1=b.x*cosY+b.z*sinY, z1=-b.x*sinY+b.z*cosY;
+      const y2=b.y*cosT-z1*sinT, z2=b.y*sinT+z1*cosT;
+      if(z2<=0.02 || z2>0.4) continue;
+      ctx.fillRect(cx+x1*R, cy-y2*R, 1.3*dpr, 1.3*dpr);
+    }
+
+    // 纬线
+    for(let lat=-75; lat<=75; lat+=15){
+      let first=true;
+      ctx.beginPath();
+      for(let lon=0; lon<=360; lon+=4){
+        const p = project(lat,lon);
+        const px = cx + p.x*R, py = cy - p.y*R;
+        const a = 0.10 + 0.30*((p.z+1)/2);   // 背面淡、正面亮
+        if(first){ctx.moveTo(px,py);first=false;} else ctx.lineTo(px,py);
+        // 按深度分段调透明度：这里整体描边，背面靠颜色淡
+      }
+      ctx.strokeStyle = 'rgba(255,255,255,.12)';
+      ctx.lineWidth = 1*dpr;
+      ctx.stroke();
+    }
+    // 经线
+    for(let lon=0; lon<360; lon+=15){
+      let first=true;
+      ctx.beginPath();
+      for(let lat=-90; lat<=90; lat+=4){
+        const p = project(lat,lon);
+        const px = cx + p.x*R, py = cy - p.y*R;
+        if(first){ctx.moveTo(px,py);first=false;} else ctx.lineTo(px,py);
+      }
+      ctx.strokeStyle = 'rgba(255,255,255,.10)';
+      ctx.lineWidth = 1*dpr;
+      ctx.stroke();
+    }
+
+    // 节点光点（杭州）
+    const t = performance.now()/1000;
+    drawVisitorDots();
+    NODES.forEach(node=>{
+      const p = project(node.lat, node.lon);
+      if(p.z <= 0.02) return;             // 背面不显示
+      const px = cx + p.x*R, py = cy - p.y*R;
+      const fade = Math.min(1, (p.z)*2.2); // 边缘淡出
+      // 脉冲圈
+      const pulse = 1 + (Math.sin(t*2.2)+1)/2 * 0.8;
+      ctx.beginPath();ctx.arc(px,py, 9*dpr*pulse, 0, Math.PI*2);
+      ctx.strokeStyle = 'rgba(255,255,255,'+(0.35*fade)+')';
+      ctx.lineWidth = 1.5*dpr; ctx.stroke();
+      // 实心光点 + 光晕
+      ctx.save();
+      ctx.shadowColor = 'rgba(255,255,255,.9)';
+      ctx.shadowBlur = 16*dpr;
+      ctx.beginPath();ctx.arc(px,py, 4*dpr, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(255,255,255,'+fade+')';ctx.fill();
+      ctx.restore();
+      // 标注
+      ctx.font = (14*dpr)+'px "Segoe UI","PingFang SC",sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,'+fade+')';
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText(node.name, px + 12*dpr, py);
+    });
+
+    if(autoSpin) rotY += 0.0028;
+    requestAnimationFrame(drawGlobe);
+  }
+
+  // 鼠标/触摸拖拽旋转
+  let dragging=false, lastX=0, lastY=0;
+  cv.addEventListener('mousedown', e=>{dragging=true;autoSpin=false;lastX=e.clientX;lastY=e.clientY;});
+  addEventListener('mouseup', ()=>dragging=false);
+  addEventListener('mousemove', e=>{
+    if(!dragging) return;
+    rotY += (e.clientX-lastX)*0.01;
+    tilt += (e.clientY-lastY)*0.01;
+    tilt = Math.max(-1.3, Math.min(1.3, tilt));
+    lastX=e.clientX;lastY=e.clientY;
+  });
+  cv.addEventListener('touchstart', e=>{dragging=true;autoSpin=false;lastX=e.touches[0].clientX;lastY=e.touches[0].clientY;},{passive:true});
+  cv.addEventListener('touchend', ()=>dragging=false);
+  cv.addEventListener('touchmove', e=>{
+    if(!dragging) return;
+    const tx=e.touches[0].clientX, ty=e.touches[0].clientY;
+    rotY += (tx-lastX)*0.01; tilt += (ty-lastY)*0.01;
+    tilt = Math.max(-1.3, Math.min(1.3, tilt));
+    lastX=tx;lastY=ty;
+  },{passive:true});
+  // 停止拖拽后恢复自转
+  setInterval(()=>{ if(!dragging) autoSpin=true; }, 2500);
+
+  gresize(); drawGlobe(); addEventListener('resize', gresize);
+
+  // ===== 返回首页：先收拢过渡，再跳转 =====
+  document.getElementById('back-home').addEventListener('click', e=>{
+    e.preventDefault();
+    document.body.classList.add('page-leave');
+    setTimeout(()=>{ location.href='index.html'; }, 700);
+  });
+
+  // ===== 入场：从中心向外展开 =====
+  document.body.classList.add('iris-in');
+  setTimeout(()=>document.body.classList.remove('iris-in'), 1000);
+
+  // ===== 访客定位与记录 =====
+  const vInfo = document.getElementById('visitor-info');
+  function setInfo(txt){ if(vInfo) vInfo.textContent = txt; }
+
+  // IP 粗定位（无需授权，城市级）
+  async function ipLoc(){
+    try{
+      const r = await fetch('https://ipwho.is/');
+      const j = await r.json();
+      if(j && j.latitude) return { lat:j.latitude, lon:j.longitude, city:j.city || j.country || '' };
+    }catch(e){}
+    return null;
+  }
+  // 浏览器精确定位（需授权）
+  function gpsLoc(){
+    return new Promise(res=>{
+      if(!navigator.geolocation) return res(null);
+      navigator.geolocation.getCurrentPosition(
+        p=>res({ lat:p.coords.latitude, lon:p.coords.longitude, city:'你' }),
+        ()=>res(null),
+        { timeout:4000, maximumAge:600000 }
+      );
+    });
+  }
+  function dedupe(list){
+    const seen = new Set(), out = [];
+    for(const v of list){
+      const k = v.lat.toFixed(1)+','+v.lon.toFixed(1);
+      if(seen.has(k)) continue;
+      seen.add(k); out.push(v);
+    }
+    return out;
+  }
+  (async function initVisitor(){
+    let loc = await gpsLoc();
+    if(!loc) loc = await ipLoc();
+
+    let others = [];
+    if(window.__CLOUD__ && window.__CLOUD__.getVisitors){
+      try{ others = await window.__CLOUD__.getVisitors() || []; }catch(e){ others = []; }
+    }
+
+    if(loc){
+      VISITORS = dedupe([Object.assign({current:true}, loc)].concat(others));
+      refreshVisitorBases();
+      setInfo('你的位置已标记' + (loc.city ? ' · '+loc.city : '') + ' · 累计 ' + VISITORS.length + ' 位访客');
+      if(window.__CLOUD__ && window.__CLOUD__.addVisitor){
+        const rec = { lat: loc.lat, lon: loc.lon, city: (loc.city && loc.city !== '你') ? loc.city : null };
+        window.__CLOUD__.addVisitor(rec).catch(()=>{});
+      }
+    } else if(others.length){
+      VISITORS = dedupe(others); refreshVisitorBases();
+      setInfo('累计 ' + VISITORS.length + ' 位访客');
+    } else {
+      setInfo('未能获取位置');
+    }
+  })();
+
+  // ===== 滚动揭示 =====
+  const io = new IntersectionObserver(es=>{
+    es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} });
+  },{threshold:.2});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>

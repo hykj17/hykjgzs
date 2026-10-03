@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>鹤羽科技</title>
+<style>
+  :root{
+    --bg:#050608;
+    --bg-soft:#0b0e13;
+    --line:rgba(255,255,255,.10);
+    --txt:#e8edf4;
+    --muted:#9aa3b0;
+    --cyan:#ffffff;
+    --violet:#ffffff;
+    --glow:0 0 40px rgba(255,255,255,.25);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  [id]{scroll-margin-top:84px}   /* 吸顶导航高度偏移，锚点不被遮住 */
+  body{
+    font-family:"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    background:var(--bg);color:var(--txt);overflow-x:hidden;line-height:1.6;
+  }
+  a{color:inherit;text-decoration:none}
+  ::selection{background:#fff;color:#000}
+
+  /* ===== 背景层 ===== */
+  #bg-canvas{position:fixed;inset:0;z-index:0;opacity:.55}
+  .bg-grad{
+    position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:
+      radial-gradient(1100px 800px at 50% -5%, rgba(255,255,255,.05), transparent 60%),
+      radial-gradient(900px 700px at 50% 115%, rgba(255,255,255,.03), transparent 60%);
+  }
+  .grid-overlay{
+    position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.35;
+    background-image:
+      linear-gradient(var(--line) 1px,transparent 1px),
+      linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:54px 54px;
+    mask-image:radial-gradient(circle at 50% 30%, #000 0%, transparent 75%);
+    -webkit-mask-image:radial-gradient(circle at 50% 30%, #000 0%, transparent 75%);
+  }
+  .wrap{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:0 24px}
+
+  /* ===== 导航 ===== */
+  header{
+    position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);
+    background:rgba(5,6,8,.55);border-bottom:1px solid var(--line);
+  }
+  .nav{display:flex;align-items:center;justify-content:space-between;height:68px}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:1px;font-size:20px}
+  .logo .dot{width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:0 0 14px rgba(255,255,255,.7);animation:pulse 2.4s infinite}
+  .logo-img{height:34px;width:34px;object-fit:contain;display:block;filter:drop-shadow(0 0 8px rgba(255,255,255,.35))}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+  .nav ul{display:flex;gap:30px;list-style:none;font-size:14px;color:var(--muted)}
+  .nav ul a:hover{color:var(--txt)}
+  .btn{
+    display:inline-block;padding:10px 22px;border-radius:30px;font-size:14px;font-weight:600;
+    border:1px solid #fff;color:#fff;transition:.25s;cursor:pointer;background:transparent;
+  }
+  .btn:hover{background:#fff;color:#000;box-shadow:0 0 30px rgba(255,255,255,.35)}
+  .btn.solid{background:#fff;border:none;color:#000}
+  .btn.solid:hover{box-shadow:0 0 30px rgba(255,255,255,.5)}
+
+  /* ===== Hero ===== */
+  .hero{padding:130px 0 90px;text-align:center}
+  .badge{
+    display:inline-flex;align-items:center;gap:8px;padding:7px 16px;border-radius:30px;
+    border:1px solid var(--line);background:rgba(255,255,255,.03);font-size:13px;color:var(--muted);margin-bottom:28px;
+  }
+  .badge .live{width:7px;height:7px;border-radius:50%;background:#fff;box-shadow:0 0 10px #fff}
+  .hero-title{
+    display:block;margin:0 auto;
+    width:clamp(300px,46vw,620px);
+    filter:drop-shadow(0 0 24px rgba(255,255,255,.12));
+  }
+  .hero p{max-width:620px;margin:26px auto 0;color:var(--muted);font-size:18px}
+  .hero .cta{margin-top:40px;display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+
+  /* ===== 数据条 ===== */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-top:80px}
+  .stat{
+    border:1px solid var(--line);border-radius:18px;padding:26px 20px;text-align:center;
+    background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.01));
+  }
+  .stat .num{font-size:38px;font-weight:800;background:linear-gradient(120deg,#fff,#c4ccd8);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .stat .lab{color:var(--muted);font-size:14px;margin-top:6px}
+
+  /* ===== 区块标题 ===== */
+  section{padding:90px 0}
+  .sec-head{text-align:center;max-width:640px;margin:0 auto 56px}
+  .sec-head .tag{color:rgba(255,255,255,.65);font-size:13px;letter-spacing:3px;text-transform:uppercase}
+  .sec-head h2{font-size:clamp(28px,4vw,44px);font-weight:800;margin:12px 0 14px}
+  .sec-head p{color:var(--muted)}
+
+  /* ===== 特性卡片 ===== */
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+  .card{
+    display:block;cursor:pointer;
+    position:relative;border:1px solid var(--line);border-radius:20px;padding:30px;
+    background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.01));
+    transition:.3s;overflow:hidden;
+  }
+  .card::before{
+    content:"";position:absolute;inset:0;border-radius:20px;padding:1px;
+    background:linear-gradient(120deg,#fff,transparent 40%,transparent 60%,#fff);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;mask-composite:exclude;opacity:0;transition:.3s;
+    pointer-events:none;   /* 装饰层不可拦截点击 */
+  }
+  .card:hover{transform:translateY(-6px);box-shadow:0 20px 50px rgba(0,0,0,.5)}
+  .card:hover::before{opacity:1}
+  .card h3{font-size:20px;margin-bottom:10px}
+  .card p{color:var(--muted);font-size:15px}
+
+  /* ===== 全球节点预览 ===== */
+  .globe-preview{
+    position:relative;margin:10px auto 0;width:min(360px,80vw);height:min(360px,80vw);
+    border:1px solid var(--line);border-radius:24px;
+    background:radial-gradient(400px 300px at 50% 40%,rgba(255,255,255,.05),transparent 70%);
+    cursor:pointer;overflow:hidden;transition:.3s;
+  }
+  .globe-preview:hover{box-shadow:0 20px 50px rgba(0,0,0,.5);transform:translateY(-4px)}
+  #globe-mini{width:100%;height:100%;display:block}
+  .globe-enter-hint{
+    position:absolute;left:50%;bottom:14px;transform:translateX(-50%);
+    font-size:13px;color:var(--muted);letter-spacing:1px;
+    background:rgba(5,6,8,.55);border:1px solid var(--line);border-radius:20px;padding:6px 14px;pointer-events:none;
+  }
+
+  /* ===== 流程 ===== */
+  .flow{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;counter-reset:s}
+  .step{border:1px solid var(--line);border-radius:18px;padding:26px 22px;background:rgba(255,255,255,.02)}
+  .step .n{counter-increment:s;font-size:14px;color:#fff;font-weight:800}
+  .step .n::before{content:"0" counter(s)}
+  .step h4{margin:10px 0 8px;font-size:17px}
+  .step p{color:var(--muted);font-size:14px}
+
+  /* ===== 进入游戏中心的过渡：内容从边缘向中间淡化收缩 ===== */
+  body.page-leave header, body.page-leave main{animation:leaveCenter .7s ease-in forwards}
+  @keyframes leaveCenter{to{opacity:0;transform:scale(.88);filter:blur(8px)}}
+  body.page-leave #bg-canvas{opacity:0;transition:opacity .7s}
+
+  /* ===== CTA ===== */
+  .cta-box{
+    border:1px solid var(--line);border-radius:28px;text-align:center;padding:64px 30px;
+    background:
+      radial-gradient(600px 300px at 50% 0%, rgba(255,255,255,.12), transparent 60%),
+      rgba(255,255,255,.02);
+  }
+  .cta-box h2{font-size:clamp(28px,4vw,46px);font-weight:800}
+  .cta-box p{color:var(--muted);margin:16px auto 30px;max-width:520px}
+  /* 反馈表单 */
+  .fb-form{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+  .fb-form textarea{
+    width:100%;box-sizing:border-box;resize:vertical;
+    background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;
+    color:var(--txt);font:inherit;font-size:15px;padding:14px 16px;outline:none;transition:border-color .2s;
+  }
+  .fb-form textarea::placeholder{color:var(--muted)}
+  .fb-form textarea:focus{border-color:rgba(255,255,255,.45)}
+  .fb-form .btn{align-self:center}
+  .fb-msg{font-size:14px;color:#fff;min-height:20px}
+
+  /* ===== Footer ===== */
+  footer{border-top:1px solid var(--line);padding:46px 0;margin-top:40px;color:var(--muted);font-size:14px}
+  .foot{display:flex;justify-content:space-between;flex-wrap:wrap;gap:20px;align-items:center}
+
+  /* ===== 滚动揭示 ===== */
+  .reveal{opacity:0;transform:translateY(28px);transition:.7s ease}
+  .reveal.in{opacity:1;transform:none}
+
+  @media(max-width:880px){
+    .nav ul{display:none}
+    .stats,.cards,.flow{grid-template-columns:1fr 1fr}
+  }
+  @media(max-width:560px){
+    .stats,.cards,.flow{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+  <canvas id="bg-canvas"></canvas>
+  <div class="bg-grad"></div>
+  <div class="grid-overlay"></div>
+
+  <header>
+    <div class="wrap nav">
+      <div class="logo"><img class="logo-img" src="hy-logo.png" alt="鹤羽科技">鹤羽科技</div>
+      <ul>
+        <li><a href="#features">项目</a></li>
+        <li><a href="#stats">数据</a></li>
+        <li><a href="#globe">节点</a></li>
+        <li><a href="#contact">反馈</a></li>
+      </ul>
+      <a href="#contact" class="btn">去反馈</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <span class="badge"><span class="live"></span> 实时在线 · 全球节点 99.99% 可用</span>
+      <img class="hero-title" src="renmin-title.png" alt="人民至上" />
+      <div class="cta">
+        <a href="#contact" class="btn solid">免费开始</a>
+        <a href="#features" class="btn">查看能力</a>
+      </div>
+
+      <div class="stats" id="stats">
+        <div class="stat reveal"><div class="num" data-to="0" data-suf="">0</div><div class="lab">累计访问人数</div></div>
+        <div class="stat reveal"><div class="num" data-to="0" data-suf="">0</div><div class="lab">今日访问人数</div></div>
+        <div class="stat reveal"><div class="num" data-to="0" data-suf="">0</div><div class="lab">当前在线人数</div></div>
+        <div class="stat reveal"><div class="num" data-to="0" data-suf="">0</div><div class="lab">历史最高在线</div></div>
+      </div>
+    </section>
+
+    <section id="features">
+      <div class="sec-head reveal">
+        <div class="tag">Our Projects</div>
+        <h2>我们的项目</h2>
+        <p>我们正在打造的作品，欢迎体验与支持。</p>
+      </div>
+      <div class="cards">
+        <a class="card reveal" href="game-center.html">
+          <h3>游戏中心</h3>
+          <p>收录我们自己开发的小游戏，欢迎游玩。</p>
+        </a>
+        <div class="card reveal">
+          <h3>开发中</h3>
+          <p>开发中，敬请期待。</p>
+        </div>
+        <div class="card reveal">
+          <h3>开发中</h3>
+          <p>开发中，敬请期待。</p>
+        </div>
+        <div class="card reveal">
+          <h3>开发中</h3>
+          <p>开发中，敬请期待。</p>
+        </div>
+        <div class="card reveal">
+          <h3>开发中</h3>
+          <p>开发中，敬请期待。</p>
+        </div>
+        <div class="card reveal">
+          <h3>开发中</h3>
+          <p>开发中，敬请期待。</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="globe">
+      <div class="sec-head reveal">
+        <div class="tag">Global Nodes</div>
+        <h2>全球节点</h2>
+        <p>遍布全球的接入节点，离你最近的就在身边。点击地球查看。</p>
+      </div>
+      <div class="globe-preview reveal" id="globe-enter">
+        <canvas id="globe-mini"></canvas>
+        <div class="globe-enter-hint">点击进入地球 →</div>
+      </div>
+    </section>
+
+    <section id="contact">
+      <div class="cta-box reveal">
+        <h2>反馈区</h2>
+        <p>有任何建议、问题或想法，欢迎留言告诉我们。</p>
+        <div class="fb-form">
+          <textarea id="fb-text" rows="4" placeholder="写下你的反馈…" maxlength="500"></textarea>
+          <button id="fb-submit" class="btn solid" type="button">提交反馈</button>
+          <div id="fb-msg" class="fb-msg"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap foot">
+      <div class="logo"><img class="logo-img" src="hy-logo.png" alt="鹤羽科技">鹤羽科技</div>
+      <div>© 2026 鹤羽科技. 保留所有权利。</div>
+      <div>隐私 · 条款 · 状态</div>
+    </div>
+  </footer>
+
+<script>
+  // ===== 白色三角形背景（随鼠标下移而移动） =====
+  const cv = document.getElementById('bg-canvas');
+  const ctx = cv.getContext('2d');
+  let w, h, tris = [];
+  let mouseX = 0, mouseY = 0;       // 实时鼠标位置
+  let smX = 0, smY = 0;             // 平滑后的鼠标位置
+  let clickDots = [];               // 点击产生的白色光点
+
+  function resize(){
+    w = cv.width = innerWidth; h = cv.height = innerHeight;
+    const n = Math.max(28, Math.min(80, Math.floor(w*h/24000)));
+    tris = [];
+    for(let i=0;i<n;i++){
+      const depth = 0.25 + Math.random()*0.95;   // 视差深度：越大移动越明显
+      tris.push({
+        bx: Math.random()*w,
+        by: Math.random()*h,
+        size: 7 + Math.random()*38,
+        rot: Math.random()*Math.PI*2,
+        vrot: (Math.random()-.5)*0.005,
+        driftY: (Math.random()*0.25+0.05),       // 持续缓慢下沉
+        depth,
+        alpha: 0.08 + depth*0.55
+      });
+    }
+  }
+
+  function drawTri(x, y, size, rot, alpha){
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    ctx.beginPath();
+    for(let i=0;i<3;i++){
+      const a = -Math.PI/2 + i*(Math.PI*2/3);
+      const px = Math.cos(a)*size, py = Math.sin(a)*size;
+      i===0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(255,255,255,'+alpha+')';
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,w,h);
+    // 平滑跟随鼠标，让“向下移动”时的动效更顺滑
+    smX += (mouseX - smX) * 0.06;
+    smY += (mouseY - smY) * 0.06;
+    const mx = smX - w/2;
+    const my = smY - h/2;
+
+    for(const t of tris){
+      t.rot += t.vrot;
+      t.by += t.driftY;                 // 持续缓慢下沉
+      if(t.by > h + 60) t.by = -60;     // 沉出底部后从顶部循环
+      // 鼠标视差：越靠下的鼠标、越深的三角形，向下偏移越大
+      const ox = mx * t.depth * 0.05;
+      const oy = my * t.depth * 0.10;
+      const x = t.bx + ox;
+      const y = t.by + oy;
+      drawTri(x, y, t.size, t.rot, t.alpha);
+    }
+
+    // 点击白点：先淡入，再从中间向外的顺序淡出
+    for(let i=clickDots.length-1;i>=0;i--){
+      const d = clickDots[i];
+      d.t++;
+      d.x += d.vx; d.y += d.vy;
+      const fin = Math.min(Math.max(d.t - d.delay, 0)/(d.life*0.3), 1); // 按圈层延迟淡入（由内向外出现）
+      const fout = Math.min((d.life - d.t)/(d.life*0.5), 1); // 后 50% 寿命淡出（由内向外消失）
+      const a = Math.max(0, fin) * Math.max(0, fout) * 0.9;
+      if(d.t >= d.life){ clickDots.splice(i,1); continue; }
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, d.r, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(255,255,255,'+a+')';
+      ctx.fill();
+    }
+
+    requestAnimationFrame(draw);
+  }
+
+  addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
+  // 触屏支持：手指下移同样驱动三角形
+  addEventListener('touchmove', e => {
+    if(e.touches[0]){ mouseX = e.touches[0].clientX; mouseY = e.touches[0].clientY; }
+  }, {passive:true});
+
+  // ===== 点击：规则的同心圆环白点，由内向外出现、由内向外消失 =====
+  function spawnClickDots(cx, cy){
+    // 五圈均匀排布，尺寸更小，点仍小，圈间延迟更小（散开更快）
+    const rings = [
+      { r: 4,   n: 12, delay: 0 },
+      { r: 9,   n: 18, delay: 2 },
+      { r: 14,  n: 24, delay: 4 },
+      { r: 19,  n: 30, delay: 6 },
+      { r: 24,  n: 36, delay: 8 }
+    ];
+    rings.forEach((ring, ri)=>{
+      for(let k=0;k<ring.n;k++){
+        const ang = (k/ring.n)*Math.PI*2 + ri*0.12; // 错位排布，更规整
+        clickDots.push({
+          x: cx + Math.cos(ang)*ring.r,
+          y: cy + Math.sin(ang)*ring.r,
+          vx: Math.cos(ang)*0.14,
+          vy: Math.sin(ang)*0.14,
+          r: 1.4,                       // 统一小尺寸
+          t: 0,
+          delay: ring.delay,            // 由内向外依次出现
+          // 越靠内寿命越短 → 由内向外消失
+          life: 80 + ri*35
+        });
+      }
+    });
+  }
+  addEventListener('click', e => spawnClickDots(e.clientX, e.clientY));
+  addEventListener('touchstart', e => {
+    if(e.touches[0]) spawnClickDots(e.touches[0].clientX, e.touches[0].clientY);
+  }, {passive:true});
+
+  resize(); draw(); addEventListener('resize', resize);
+
+  // ===== 访问人数统计：本机真实计数 + 展示基数 =====
+  (function(){
+    const BASE_TOTAL = 8642, BASE_TODAY = 213, PEAK = 38;   // 展示基数/峰值
+    const today = new Date().toISOString().slice(0,10);
+    let s = {};
+    try { s = JSON.parse(localStorage.getItem('visit_stats') || '{}'); } catch(e){}
+    if(s.day !== today){ s = { day: today, today: 0, total: s.total || 0 }; }
+    s.total += 1; s.today += 1;                             // 每次打开页面真实 +1
+    try { localStorage.setItem('visit_stats', JSON.stringify(s)); } catch(e){}
+    const online = 1 + Math.floor(Math.random()*7);          // 当前在线（无后端，模拟波动）
+    const map = [
+      ['累计访问人数', s.total + BASE_TOTAL, ''],
+      ['今日访问人数', s.today + BASE_TODAY, ''],
+      ['当前在线人数', online, ' 人'],
+      ['历史最高在线', Math.max(PEAK, online), ' 人']
+    ];
+    document.querySelectorAll('#stats .stat').forEach((el,i)=>{
+      const num = el.querySelector('.num'), lab = el.querySelector('.lab');
+      if(!num || !map[i]) return;
+      lab.textContent = map[i][0];
+      num.dataset.to = map[i][1];
+      num.dataset.suf = map[i][2];
+    });
+  })();
+
+  // ===== 锚点导航：JS 接管，任何环境（含 iframe 预览）都能平滑滚动到对应区块 =====
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const target = document.querySelector(a.getAttribute('href'));
+      if(target){
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        history.replaceState(null, '', a.getAttribute('href'));
+      }
+    });
+  });
+
+  // ===== 进入游戏中心：先播放"向中间收拢"过渡，再跳转 =====
+  // 预览面板 iframe 会拦截跳转，此时改为新标签页打开
+  function goPage(url){
+    // 直接在当前窗口/iframe 内导航，避免 iframe 弹窗被浏览器拦截
+    location.href = url;
+  }
+  const gcLink = document.querySelector('a.card[href="game-center.html"]');
+  if(gcLink){
+    gcLink.addEventListener('click', e => {
+      e.preventDefault();
+      document.body.classList.add('page-leave');
+      setTimeout(() => goPage('game-center.html'), 700);
+    });
+  }
+
+  // ===== 全球节点：点击地球进入 globe.html（带收拢过渡） =====
+  const globeEnter = document.getElementById('globe-enter');
+  if(globeEnter){
+    globeEnter.addEventListener('click', () => {
+      document.body.classList.add('page-leave');
+      setTimeout(() => location.href = 'globe.html', 700);
+    });
+  }
+
+  // ===== 首页小地球预览（线框 + 杭州光点，自动自转） =====
+  (function(){
+    const mc = document.getElementById('globe-mini');
+    if(!mc) return;
+    const mctx = mc.getContext('2d');
+    const dpr = Math.min(2, window.devicePixelRatio||1);
+    let mW,mH,mcx,mcy,mR, mRotY=0, mTilt=-0.45;
+    const D = Math.PI/180;
+    function mresize(){
+      const r = mc.getBoundingClientRect();
+      mW = mc.width = r.width*dpr; mH = mc.height = r.height*dpr;
+      mcx = mW/2; mcy = mH/2; mR = Math.min(mW,mH)*0.38;
+    }
+    function proj(lat,lon){
+      const la=lat*D, lo=lon*D;
+      let x=Math.cos(la)*Math.sin(lo), y=Math.sin(la), z=Math.cos(la)*Math.cos(lo);
+      let x1=x*Math.cos(mRotY)+z*Math.sin(mRotY);
+      let z1=-x*Math.sin(mRotY)+z*Math.cos(mRotY);
+      let y2=y*Math.cos(mTilt)-z1*Math.sin(mTilt);
+      let z2=y*Math.sin(mTilt)+z1*Math.cos(mTilt);
+      return {x:x1,y:y2,z:z2};
+    }
+    function mdraw(){
+      mctx.clearRect(0,0,mW,mH);
+      for(let lat=-75;lat<=75;lat+=15){
+        mctx.beginPath();let f=true;
+        for(let lon=0;lon<=360;lon+=4){const p=proj(lat,lon);const px=mcx+p.x*mR,py=mcy-p.y*mR;f?mctx.moveTo(px,py):mctx.lineTo(px,py);f=false;}
+        mctx.strokeStyle='rgba(255,255,255,.16)';mctx.lineWidth=1*dpr;mctx.stroke();
+      }
+      for(let lon=0;lon<360;lon+=15){
+        mctx.beginPath();let f=true;
+        for(let lat=-90;lat<=90;lat+=4){const p=proj(lat,lon);const px=mcx+p.x*mR,py=mcy-p.y*mR;f?mctx.moveTo(px,py):mctx.lineTo(px,py);f=false;}
+        mctx.strokeStyle='rgba(255,255,255,.13)';mctx.lineWidth=1*dpr;mctx.stroke();
+      }
+      const p=proj(30.28,120.15);
+      if(p.z>0.02){
+        const px=mcx+p.x*mR,py=mcy-p.y*mR, fade=Math.min(1,p.z*2.2);
+        mctx.save();mctx.shadowColor='rgba(255,255,255,.9)';mctx.shadowBlur=14*dpr;
+        mctx.beginPath();mctx.arc(px,py,4*dpr,0,Math.PI*2);mctx.fillStyle='rgba(255,255,255,'+fade+')';mctx.fill();mctx.restore();
+        mctx.font=(13*dpr)+'px "Segoe UI","PingFang SC",sans-serif';mctx.fillStyle='rgba(255,255,255,'+fade+')';
+        mctx.textAlign='left';mctx.textBaseline='middle';mctx.fillText('杭州',px+11*dpr,py);
+      }
+      mRotY+=0.0028;
+      requestAnimationFrame(mdraw);
+    }
+    mresize();mdraw();addEventListener('resize',mresize);
+  })();
+
+  // ===== 反馈区：本地保存反馈 =====
+  const fbText = document.getElementById('fb-text');
+  const fbBtn = document.getElementById('fb-submit');
+  const fbMsg = document.getElementById('fb-msg');
+  fbBtn.addEventListener('click', () => {
+    const txt = fbText.value.trim();
+    if(!txt){ fbMsg.textContent = '请先写下反馈内容再提交。'; return; }
+    try{
+      const list = JSON.parse(localStorage.getItem('site_feedback') || '[]');
+      list.push({ text: txt, time: new Date().toLocaleString() });
+      localStorage.setItem('site_feedback', JSON.stringify(list));
+    }catch(e){}
+    fbText.value = '';
+    fbMsg.textContent = '已收到你的反馈，感谢支持！';
+    setTimeout(() => fbMsg.textContent = '', 3000);
+  });
+
+  // ===== 滚动揭示 + 数字递增 =====
+  const io = new IntersectionObserver(es=>{
+    es.forEach(e=>{
+      if(e.isIntersecting){
+        e.target.classList.add('in');
+        e.target.querySelectorAll?.('.num').forEach(runCount);
+        if(e.target.classList.contains('num')) runCount(e.target);
+        io.unobserve(e.target);
+      }
+    });
+  },{threshold:.2});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  function runCount(el){
+    const to=+el.dataset.to, suf=el.dataset.suf||'';
+    let cur=0; const step=to/40;
+    const t=setInterval(()=>{
+      cur+=step; if(cur>=to){cur=to;clearInterval(t);}
+      el.textContent=Math.floor(cur)+suf;
+    },22);
+  }
+</script>
+</body>
+</html>
